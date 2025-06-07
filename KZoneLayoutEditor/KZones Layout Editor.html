@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KWin Layout Editor</title>
+    <style>
+        :root {
+            --bg-color: #f4f4f4;
+            --text-color: #333;
+            --text-muted-color: #666;
+            --container-bg-color: #fff;
+            --container-shadow: rgba(0,0,0,0.08);
+            --container-shadow-hover: rgba(0,0,0,0.12);
+            --input-border-color: #ddd;
+            --input-bg-color: #fff;
+            --input-text-color: #333;
+
+            --primary-color: #5091D7; 
+            --primary-hover-color: #437ABF;
+            --primary-active-color: #3A6AA0;
+            --primary-focus-shadow: rgba(80, 145, 215, 0.25);
+            --primary-zone-preview-bg: rgba(80, 145, 215, 0.65); 
+            --primary-zone-preview-border: rgba(67, 122, 191, 0.9);
+
+            --button-primary-bg: var(--primary-color);
+            --button-primary-hover-bg: var(--primary-hover-color);
+            --button-primary-active-bg: var(--primary-active-color);
+            --input-focus-border-color: var(--primary-color);
+            --input-focus-shadow: var(--primary-focus-shadow);
+            --zone-preview-bg: var(--primary-zone-preview-bg);
+            --zone-preview-border: var(--primary-zone-preview-border);
+            --toggle-bg-on: var(--primary-color);
+
+            --button-secondary-bg: #6c757d;
+            --button-secondary-hover-bg: #5a6268;
+            --button-secondary-active-bg: #545b62;
+            --button-danger-bg: #dc3545;
+            --button-danger-hover-bg: #c82333;
+            --button-danger-active-bg: #bd2130;
+            --button-text-color: white;
+            --preview-bg-color: #e9ecef;
+            --preview-border-color: #ced4da;
+            --zone-editor-bg: #f8f9fa;
+            --zone-editor-border: #dee2e6;
+            --hr-color: #e9ecef;
+            --toggle-bg-off: #ccc;
+            --toggle-knob-color: white;
+            --interactive-hover-bg: rgba(0,0,0,0.03);
+            --border-radius-sm: 4px;
+            --border-radius-md: 8px;
+            --border-radius-lg: 12px;
+        }
+
+        .dark-mode {
+            --bg-color: #1a1d21; 
+            --text-color: #e0e6ec;
+            --text-muted-color: #8899a6;
+            --container-bg-color: #272c33;
+            --container-shadow: rgba(0,0,0,0.25);
+            --container-shadow-hover: rgba(0,0,0,0.35);
+            --input-border-color: #4a525c;
+            --input-bg-color: #323840;
+            --input-text-color: #e0e6ec;
+
+            --primary-color-dark: #3B82F6; 
+            --primary-hover-color-dark: #2563EB; 
+            --primary-active-color-dark: #1D4ED8; 
+            --primary-focus-shadow-dark: rgba(59, 130, 246, 0.3);
+            --primary-zone-preview-bg-dark: rgba(59, 130, 246, 0.65);
+            --primary-zone-preview-border-dark: rgba(37, 99, 235, 0.9);
+
+            --button-primary-bg: var(--primary-color-dark);
+            --button-primary-hover-bg: var(--primary-hover-color-dark);
+            --button-primary-active-bg: var(--primary-active-color-dark);
+            --input-focus-border-color: var(--primary-color-dark);
+            --input-focus-shadow: var(--primary-focus-shadow-dark);
+            --zone-preview-bg: var(--primary-zone-preview-bg-dark);
+            --zone-preview-border: var(--primary-zone-preview-border-dark);
+            --toggle-bg-on: var(--primary-color-dark);
+            
+            --button-secondary-bg: #5a6268;
+            --button-secondary-hover-bg: #6c757d;
+            --button-secondary-active-bg: #495057;
+            --button-danger-bg: #c82333;
+            --button-danger-hover-bg: #dc3545;
+            --button-danger-active-bg: #bd2130;
+            --preview-bg-color: #323840;
+            --preview-border-color: #4a525c;
+            --zone-editor-bg: #2c3138;
+            --zone-editor-border: #40464e;
+            --hr-color: #3a4047;
+            --toggle-bg-off: #4a525c;
+            --interactive-hover-bg: rgba(255,255,255,0.05);
+        }
+        
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeInSlideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0; padding: 20px; background-color: var(--bg-color); color: var(--text-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        #app-wrapper { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 25px; }
+        #app-header { display: flex; justify-content: space-between; align-items: center; padding: 0 10px; animation: fadeInSlideDown 0.5s ease-out; }
+        #app-header h1 { margin: 0; font-size: 2em; font-weight: 600; }
+        .container {
+            background-color: var(--container-bg-color); padding: 25px; border-radius: var(--border-radius-lg); 
+            box-shadow: 0 4px 12px var(--container-shadow);
+            transition: background-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease-out;
+        }
+        label { display: inline-block; margin-bottom: 8px; font-weight: 500; font-size: 0.9em; color: var(--text-muted-color); }
+        input[type="text"], input[type="number"], select, textarea {
+            width: calc(100% - 24px); padding: 12px; margin-bottom: 12px; border: 1px solid var(--input-border-color);
+            background-color: var(--input-bg-color); color: var(--input-text-color); border-radius: var(--border-radius-md); 
+            box-sizing: border-box; font-size: 1em;
+            transition: border-color 0.2s ease, background-color 0.3s ease, color 0.3s ease, box-shadow 0.2s ease;
+        }
+        input:focus, select:focus, textarea:focus { border-color: var(--input-focus-border-color); box-shadow: 0 0 0 3px var(--input-focus-shadow); outline: none; }
+        textarea { min-height: 70px; resize: vertical; }
+        button {
+            padding: 10px 18px; background-color: var(--button-primary-bg); color: var(--button-text-color);
+            border: none; border-radius: var(--border-radius-md); cursor: pointer; margin-right: 8px; 
+            font-weight: 500; font-size: 0.95em;
+            transition: background-color 0.2s ease, transform 0.15s ease-out, box-shadow 0.2s ease;
+        }
+        button:hover { transform: translateY(-2px); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .dark-mode button:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        button:active { transform: translateY(0px) scale(0.98); box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
+        button.danger { background-color: var(--button-danger-bg); }
+        button.danger:hover { background-color: var(--button-danger-hover-bg); }
+        button.danger:active { background-color: var(--button-danger-active-bg); }
+        button.secondary { background-color: var(--button-secondary-bg); }
+        button.secondary:hover { background-color: var(--button-secondary-hover-bg); }
+        button.secondary:active { background-color: var(--button-secondary-active-bg); }
+        
+        .section-collapsible {
+            overflow: hidden; max-height: 1500px; opacity: 1;
+            transition: max-height 0.4s cubic-bezier(0.25, 0.1, 0.25, 1), 
+                        opacity 0.3s ease-in-out 0.1s, 
+                        padding-top 0.4s cubic-bezier(0.25, 0.1, 0.25, 1), 
+                        padding-bottom 0.4s cubic-bezier(0.25, 0.1, 0.25, 1),
+                        margin-bottom 0.4s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        .section-collapsible.hidden {
+            max-height: 0; opacity: 0; padding-top: 0 !important; padding-bottom: 0 !important; margin-bottom: 0 !important;
+            border-top-width: 0 !important; border-bottom-width: 0 !important; transition-delay: 0s;
+        }
+        .deleteLayoutButton-wrapper.hidden { opacity: 0; transform: scale(0.95); pointer-events: none; }
+        .deleteLayoutButton-wrapper { display: inline-block; transition: opacity 0.3s ease, transform 0.3s ease; }
+
+        #visual-preview-container {
+            width: 100%; max-width: 600px; aspect-ratio: 16 / 9; background-color: var(--preview-bg-color);
+            border: 1px solid var(--preview-border-color); position: relative; margin-top: 10px; margin-bottom: 25px; 
+            overflow: hidden; border-radius: var(--border-radius-md);
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+        }
+        .zone-preview {
+            position: absolute; background-color: var(--zone-preview-bg); border: 1px solid var(--zone-preview-border);
+            box-sizing: border-box; display: flex; align-items: center; justify-content: center;
+            color: white; font-size: 0.8em; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            border-radius: var(--border-radius-sm); box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            transition: left 0.3s cubic-bezier(0.25, 0.1, 0.25, 1),
+                        top 0.3s cubic-bezier(0.25, 0.1, 0.25, 1),
+                        width 0.3s cubic-bezier(0.25, 0.1, 0.25, 1),
+                        height 0.3s cubic-bezier(0.25, 0.1, 0.25, 1),
+                        opacity 0.3s ease-in-out, 
+                        transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1), 
+                        background-color 0.3s ease,
+                        border-color 0.3s ease;
+        }
+        .zone-editor {
+            border: 1px solid var(--zone-editor-border); padding: 20px; margin-bottom: 20px; 
+            border-radius: var(--border-radius-md); background-color: var(--zone-editor-bg);
+            transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.2s ease;
+        }
+        .zone-editor:hover { border-color: var(--input-focus-border-color); }
+        .zone-editor.newly-added { animation: fadeInSlideDown 0.4s ease-out forwards; }
+        .zone-editor h4 {
+            margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid var(--hr-color);
+            padding-bottom: 10px; transition: border-color 0.3s ease; font-weight: 600;
+        }
+        
+        /* ---- THIS IS THE ADDED/MODIFIED CSS RULE FOR SCROLLING ---- */
+        #zonesList {
+            max-height: 700px; /* You can adjust this value (e.g., 60vh) */
+            overflow-y: auto;  /* Add vertical scrollbar if content overflows */
+            overflow-x: hidden; /* Prevent horizontal scrollbar */
+            padding-right: 5px; /* Add a little space so content isn't under scrollbar */
+                               /* Note: scrollbar-gutter: stable; is a more modern alternative */
+                               /* but padding-right is more widely supported for basic spacing. */
+        }
+        /* ---- END OF SCROLLING CSS RULE ---- */
+
+        .form-group { margin-bottom: 10px; }
+        .form-group label { width: 85px; margin-right: 10px; }
+        .form-group input[type="number"], .form-group input[type="text"] { width: calc(100% - 105px); }
+        .percentage-buttons button {
+            font-size: 0.8em; padding: 4px 8px; margin-left: 4px;
+            background-color: var(--button-secondary-bg); border-radius: var(--border-radius-sm);
+        }
+        .percentage-buttons button:hover { background-color: var(--button-secondary-hover-bg); transform: translateY(-1px); }
+        #reorder-list .reorder-item {
+            display: flex; align-items: center; margin-bottom: 10px; padding: 12px 15px; 
+            border: 1px solid var(--hr-color); border-radius: var(--border-radius-md);
+            transition: border-color 0.3s ease, background-color 0.2s ease;
+        }
+        #reorder-list .reorder-item:hover { background-color: var(--interactive-hover-bg); border-color: var(--input-focus-border-color); }
+        #reorder-list .reorder-item.newly-added { animation: fadeInSlideDown 0.4s ease-out forwards; }
+        #reorder-list .reorder-item input[type="number"] { width: 60px; margin-right: 15px; margin-bottom: 0; padding: 8px; }
+        #reorder-list .reorder-item span { flex-grow: 1; font-weight: 500; }
+        
+        .toggle-switch {
+            position: relative; display: inline-block; width: 50px; height: 26px; 
+            background-color: var(--toggle-bg-off); border-radius: 26px; cursor: pointer;
+            transition: background-color 0.3s ease; padding: 0; margin:0; border: none; 
+            vertical-align: middle; flex-shrink: 0; 
+        }
+        .toggle-switch::after {
+            content: ''; position: absolute; width: 20px; height: 20px; 
+            border-radius: 50%; background-color: var(--toggle-knob-color);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2); top: 3px; left: 3px; 
+            transition: transform 0.3s cubic-bezier(0.25, 0.1, 0.25, 1), background-color 0.3s ease;
+        }
+        body.dark-mode .toggle-switch { background-color: var(--toggle-bg-on); }
+        body.dark-mode .toggle-switch::after { transform: translateX(24px); }
+        h2, h3 { font-weight: 600; color: var(--text-color); margin-top: 0; margin-bottom: 20px; }
+        p { color: var(--text-muted-color); line-height: 1.6; }
+    </style>
+</head>
+<body>
+    <div id="app-wrapper">
+        <div id="app-header">
+            <h1>KZones Layout Editor</h1>
+            <button id="toggleDarkModeButton" class="toggle-switch" aria-label="Toggle Dark Mode"></button>
+        </div>
+
+        <div id="top-bar" class="container section-collapsible">
+            <h2>Layout Selection</h2>
+            <select id="layoutSelector"></select>
+            <button id="changeOrderButton" class="secondary">Change Order</button>
+            <button id="addNewLayoutButton">Add New Layout</button>
+            <span class="deleteLayoutButton-wrapper hidden"> 
+                <button id="deleteLayoutButton" class="danger">Delete Current Layout</button>
+            </span>
+        </div>
+
+        <div id="reorder-area" class="container section-collapsible hidden">
+            <h2>Reorder Layouts</h2>
+            <p>Set the desired order (lower numbers appear first). Then click "Save Order".</p>
+            <div id="reorder-list"></div>
+            <button id="saveOrderButton">Save Order & Close</button>
+            <button id="cancelOrderButton" class="secondary">Cancel</button>
+        </div>
+
+        <div id="layout-editor-area" class="container section-collapsible hidden">
+            <h2>Layout Properties</h2>
+            <div class="form-group"> <label for="layoutName">Name:</label> <input type="text" id="layoutName"> </div>
+            <div class="form-group"> <label for="layoutOrder">Order:</label> <input type="number" id="layoutOrder" min="1"> </div>
+            <div class="form-group"> <label for="layoutPadding">Padding:</label> <input type="number" id="layoutPadding" min="0" value="0"> </div>
+            <h3>Visual Preview</h3>
+            <div id="visual-preview-container"></div>
+        </div>
+
+        <div id="zones-editor-area" class="container section-collapsible hidden">
+            <h2>Zones</h2>
+            <div id="zonesList"></div> <!-- This div will now scroll -->
+            <button id="addZoneButton">Add New Zone</button>
+        </div>
+
+        <div id="export-import-area" class="container section-collapsible">
+            <h2>Manage Data</h2>
+            <button id="exportButton">Export Layouts to JSON</button>
+            <input type="file" id="importFile" accept=".json" style="display: none;">
+            <button id="importButton">Import Layouts from JSON</button>
+        </div>
+    </div>
+
+    <script>
+        const initialJsonData = `
+[{"name":"Priority Grid","padding":0,"zones":[{"x":0,"y":0,"height":100,"width":25},{"x":25,"y":0,"height":100,"width":50,"applications":["firefox"]},{"x":75,"y":0,"height":100,"width":25}]},{"name":"Split horizontal","padding":0,"zones":[{"x":0,"y":0,"height":100,"width":50},{"x":50,"y":0,"height":100,"width":50}]},{"name":"Quadrant Grid","padding":0,"zones":[{"x":0,"y":0,"height":50,"width":50},{"x":0,"y":50,"height":50,"width":50},{"x":50,"y":50,"height":50,"width":50},{"x":50,"y":0,"height":50,"width":50}]},{"name":"Thirds vertical","padding":0,"zones":[{"x":0,"y":0,"height":33,"width":100},{"x":0,"y":33,"height":33,"width":100},{"x":0,"y":66,"height":33,"width":100}]},{"name":"Priotiry split vertical","padding":0,"zones":[{"x":0,"y":0,"height":66,"width":100},{"x":0,"y":66,"height":33,"width":100}]}]
+        `;
+
+        let layouts = [];
+        let currentLayoutIndex = -1;
+        let nextStableId = 1; 
+
+        const toggleDarkModeButton = document.getElementById('toggleDarkModeButton');
+        const layoutOrderInput = document.getElementById('layoutOrder');
+        const layoutSelector = document.getElementById('layoutSelector');
+        const changeOrderButton = document.getElementById('changeOrderButton');
+        const addNewLayoutButton = document.getElementById('addNewLayoutButton');
+        const deleteLayoutButtonWrapper = document.querySelector('.deleteLayoutButton-wrapper'); 
+        const deleteLayoutButton = document.getElementById('deleteLayoutButton'); 
+        const reorderArea = document.getElementById('reorder-area');
+        const reorderListDiv = document.getElementById('reorder-list');
+        const saveOrderButton = document.getElementById('saveOrderButton');
+        const cancelOrderButton = document.getElementById('cancelOrderButton');
+        const layoutEditorArea = document.getElementById('layout-editor-area');
+        const layoutNameInput = document.getElementById('layoutName');
+        const layoutPaddingInput = document.getElementById('layoutPadding');
+        const visualPreviewContainer = document.getElementById('visual-preview-container');
+        const zonesEditorArea = document.getElementById('zones-editor-area');
+        const zonesListDiv = document.getElementById('zonesList');
+        const addZoneButton = document.getElementById('addZoneButton');
+        const exportButton = document.getElementById('exportButton');
+        const importFileInput = document.getElementById('importFile');
+        const importButton = document.getElementById('importButton');
+
+        function applyDarkModePreference() {
+            const preference = localStorage.getItem('darkMode');
+            if (preference === 'enabled') { document.body.classList.add('dark-mode'); } 
+            else if (preference === 'disabled') { document.body.classList.remove('dark-mode'); } 
+            else { document.body.classList.add('dark-mode'); localStorage.setItem('darkMode', 'enabled'); }
+        }
+
+        toggleDarkModeButton.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', document.body.classList.contains('dark-mode') ? 'enabled' : 'disabled');
+        });
+
+        function triggerAppearAnimation(element) {
+            element.classList.add('newly-added');
+            setTimeout(() => element.classList.remove('newly-added'), 450); 
+        }
+        
+        function safeParseInt(value, defaultValue = 0) { const p = parseInt(value, 10); return isNaN(p) ? defaultValue : p; }
+        function safeParseFloat(value, defaultValue = 0.0) { const p = parseFloat(value); return isNaN(p) ? defaultValue : p; }
+        
+        const percentagePresets = [0, 25, 33.33, 50, 66.67, 75, 100];
+        function createPercentageButtons(inputId) {
+            const c = document.createElement('span'); c.className = 'percentage-buttons';
+            percentagePresets.forEach(p => {
+                const btn = document.createElement('button'); btn.textContent = p + '%'; btn.type = 'button';
+                btn.onclick = () => { document.getElementById(inputId).value = p; document.getElementById(inputId).dispatchEvent(new Event('input', { bubbles: true })); };
+                c.appendChild(btn);
+            }); return c;
+        }
+        
+        function sortLayoutsArray() {
+            layouts.sort((a, b) => {
+                const oA = a.order !== undefined ? a.order : Infinity, oB = b.order !== undefined ? b.order : Infinity;
+                return oA === oB ? (a._stableId || 0) - (b._stableId || 0) : oA - oB;
+            });
+        }
+        
+        function findMaxOrder() { return layouts.length === 0 ? 0 : Math.max(...layouts.map(l => l.order || 0), 0); }
+
+        function refreshLayoutListAndSelection(selectedLayoutName = null) {
+            sortLayoutsArray(); populateLayoutSelector();
+            let newIdx = selectedLayoutName ? layouts.findIndex(l => l.name === selectedLayoutName) : -1;
+            layoutSelector.value = newIdx !== -1 ? newIdx : (layouts.length > 0 ? "0" : "");
+            handleLayoutSelect(); 
+        }
+
+        function loadLayouts(data) {
+            try {
+                const pData = JSON.parse(data);
+                layouts = Array.isArray(pData) ? pData.map((l, i) => ({ ...l, order: l.order !== undefined ? parseInt(l.order, 10) : (i + 1), _stableId: l._stableId || nextStableId++ })) : [];
+            } catch (e) { console.error("Error parsing JSON data:", e); alert("Error loading layouts: Invalid JSON format."); layouts = []; }
+            
+            const selName = (currentLayoutIndex !== -1 && layouts[currentLayoutIndex]) ? layouts[currentLayoutIndex].name : (layouts.length > 0 ? layouts[0].name : null);
+            refreshLayoutListAndSelection(selName);
+            if (layouts.length === 0) { clearEditor(); layoutEditorArea.classList.add('hidden'); zonesEditorArea.classList.add('hidden'); deleteLayoutButtonWrapper.classList.add('hidden'); }
+            changeOrderButton.classList.toggle('hidden', layouts.length === 0);
+        }
+
+        function populateLayoutSelector() {
+            layoutSelector.innerHTML = '';
+            if (layouts.length === 0) { const o = document.createElement('option'); o.textContent = "No layouts - Add or import"; o.disabled = true; layoutSelector.appendChild(o); changeOrderButton.classList.add('hidden'); return; }
+            layouts.forEach((l, i) => { const o = document.createElement('option'); o.value = i; o.textContent = l.name || `Layout ${l.order}`; layoutSelector.appendChild(o); });
+            changeOrderButton.classList.remove('hidden');
+        }
+
+        function clearEditor() { layoutNameInput.value = ''; layoutOrderInput.value = ''; layoutPaddingInput.value = '0'; zonesListDiv.innerHTML = ''; visualPreviewContainer.innerHTML = ''; }
+
+        function renderCurrentLayoutEditor() {
+            if (currentLayoutIndex === -1 || !layouts[currentLayoutIndex]) { clearEditor(); layoutEditorArea.classList.add('hidden'); zonesEditorArea.classList.add('hidden'); deleteLayoutButtonWrapper.classList.add('hidden'); return; }
+            layoutEditorArea.classList.remove('hidden'); zonesEditorArea.classList.remove('hidden'); deleteLayoutButtonWrapper.classList.remove('hidden');
+            const l = layouts[currentLayoutIndex];
+            layoutNameInput.value = l.name || ''; layoutOrderInput.value = l.order !== undefined ? l.order : ''; layoutPaddingInput.value = l.padding || 0;
+            renderZonesList(); renderVisualPreview();
+        }
+
+        function renderZonesList() {
+            zonesListDiv.innerHTML = ''; const l = layouts[currentLayoutIndex]; if (!l || !l.zones) return;
+            l.zones.forEach((z, i) => {
+                const zd = document.createElement('div'); zd.className = 'zone-editor';
+                zd.innerHTML = `<h4>Zone ${i + 1} <button class="danger delete-zone-btn" data-index="${i}">Delete Zone</button></h4> <div class="form-group"> <label for="zoneX-${i}">X (%):</label> <input type="number" id="zoneX-${i}" data-index="${i}" data-prop="x" value="${z.x || 0}" min="0" max="100" step="0.01"> </div> <div class="form-group"> <label for="zoneY-${i}">Y (%):</label> <input type="number" id="zoneY-${i}" data-index="${i}" data-prop="y" value="${z.y || 0}" min="0" max="100" step="0.01"> </div> <div class="form-group"> <label for="zoneWidth-${i}">Width (%):</label> <input type="number" id="zoneWidth-${i}" data-index="${i}" data-prop="width" value="${z.width || 0}" min="0" max="100" step="0.01"> </div> <div class="form-group"> <label for="zoneHeight-${i}">Height (%):</label> <input type="number" id="zoneHeight-${i}" data-index="${i}" data-prop="height" value="${z.height || 0}" min="0" max="100" step="0.01"> </div> <div class="form-group"> <label for="zoneApps-${i}">Apps:</label> <input type="text" id="zoneApps-${i}" data-index="${i}" data-prop="applications" placeholder="e.g., firefox,kate" value="${(z.applications || []).join(',')}"> </div>`;
+                ['zoneX', 'zoneY', 'zoneWidth', 'zoneHeight'].forEach(p => { const ip = zd.querySelector(`#${p}-${i}`); zd.querySelector(`#${p}-${i}`).parentNode.appendChild(createPercentageButtons(`${p}-${i}`)); });
+                zonesListDiv.appendChild(zd);
+            });
+            zonesListDiv.querySelectorAll('input').forEach(ip => { ip.addEventListener('input', handleZoneInputChange); ip.addEventListener('change', handleZoneInputChange); });
+            zonesListDiv.querySelectorAll('.delete-zone-btn').forEach(b => b.addEventListener('click', handleDeleteZone));
+        }
+
+        function renderVisualPreview() {
+            if (currentLayoutIndex === -1 || !layouts[currentLayoutIndex] || !layouts[currentLayoutIndex].zones) {
+                visualPreviewContainer.innerHTML = ''; return;
+            }
+            const layout = layouts[currentLayoutIndex]; const activeZonePreviewIds = new Set();
+            layout.zones.forEach((zone, index) => {
+                const zonePreviewId = `visual-preview-zone-${index}`; activeZonePreviewIds.add(zonePreviewId);
+                let zonePreviewDiv = document.getElementById(zonePreviewId);
+                const isNew = !zonePreviewDiv;
+                if (isNew) { zonePreviewDiv = document.createElement('div'); zonePreviewDiv.id = zonePreviewId; zonePreviewDiv.className = 'zone-preview'; visualPreviewContainer.appendChild(zonePreviewDiv); zonePreviewDiv.style.opacity = '0'; zonePreviewDiv.style.transform = 'scale(0.9)'; }
+                zonePreviewDiv.style.left = `${zone.x || 0}%`; zonePreviewDiv.style.top = `${zone.y || 0}%`; zonePreviewDiv.style.width = `${zone.width || 0}%`; zonePreviewDiv.style.height = `${zone.height || 0}%`;
+                if(isNew) { setTimeout(() => { zonePreviewDiv.style.opacity = '1'; zonePreviewDiv.style.transform = 'scale(1)'; }, 20); }
+                zonePreviewDiv.textContent = `Z${index + 1}`; zonePreviewDiv.title = (zone.applications && zone.applications.length > 0) ? `Apps: ${zone.applications.join(', ')}` : '';
+            });
+            visualPreviewContainer.querySelectorAll('.zone-preview').forEach(div => {
+                if (!activeZonePreviewIds.has(div.id)) { div.style.opacity = '0'; div.style.transform = 'scale(0.8)'; setTimeout(() => div.remove(), 300); }
+            });
+        }
+        
+        function populateReorderList() {
+            reorderListDiv.innerHTML = '';
+            layouts.forEach((l) => { 
+                const id = document.createElement('div'); id.className = 'reorder-item';
+                const oi = document.createElement('input'); oi.type = 'number'; oi.value = l.order; oi.min = 1; oi.dataset.layoutStableId = l._stableId; 
+                const ns = document.createElement('span'); ns.textContent = l.name || `Layout (ID: ${l._stableId})`;
+                id.appendChild(oi); id.appendChild(ns); reorderListDiv.appendChild(id);
+            });
+        }
+
+        function handleLayoutSelect() {
+            const selVal = layoutSelector.value;
+            currentLayoutIndex = (selVal === "" || selVal === null) ? -1 : parseInt(selVal);
+            if (currentLayoutIndex !== -1 && layouts[currentLayoutIndex]) { [layoutEditorArea, zonesEditorArea, deleteLayoutButtonWrapper].forEach(el => el.classList.remove('hidden')); } 
+            else { [layoutEditorArea, zonesEditorArea, deleteLayoutButtonWrapper].forEach(el => el.classList.add('hidden')); }
+            renderCurrentLayoutEditor();
+        }
+
+        changeOrderButton.addEventListener('click', () => {
+            const isHidden = reorderArea.classList.contains('hidden');
+            if (isHidden) { populateReorderList(); reorderArea.classList.remove('hidden'); layoutEditorArea.classList.add('hidden'); zonesEditorArea.classList.add('hidden'); changeOrderButton.textContent = "Cancel Reorder"; } 
+            else { reorderArea.classList.add('hidden'); if (currentLayoutIndex !== -1) { layoutEditorArea.classList.remove('hidden'); zonesEditorArea.classList.remove('hidden'); } changeOrderButton.textContent = "Change Order"; }
+        });
+
+        cancelOrderButton.addEventListener('click', () => {
+            reorderArea.classList.add('hidden'); if (currentLayoutIndex !== -1) { layoutEditorArea.classList.remove('hidden'); zonesEditorArea.classList.remove('hidden'); }
+            changeOrderButton.textContent = "Change Order";
+        });
+
+        saveOrderButton.addEventListener('click', () => {
+            const selName = (currentLayoutIndex !== -1 && layouts[currentLayoutIndex]) ? layouts[currentLayoutIndex].name : null;
+            reorderListDiv.querySelectorAll('.reorder-item input[type="number"]').forEach(ip => {
+                const sId = parseInt(ip.dataset.layoutStableId), ltu = layouts.find(l => l._stableId === sId);
+                if (ltu) { const nO = parseInt(ip.value, 10); ltu.order = isNaN(nO) || nO < 1 ? (findMaxOrder() + 1) : nO; }
+            });
+            refreshLayoutListAndSelection(selName); reorderArea.classList.add('hidden');
+            if (currentLayoutIndex !== -1 || layouts.length > 0) { if (currentLayoutIndex === -1 && layouts.length > 0) currentLayoutIndex = 0; if (layouts[currentLayoutIndex]) { layoutEditorArea.classList.remove('hidden'); zonesEditorArea.classList.remove('hidden'); } }
+            changeOrderButton.textContent = "Change Order";
+        });
+
+        addNewLayoutButton.addEventListener('click', () => {
+            const nO = findMaxOrder() + 1, nL = { name: `New Layout ${nO}`, order: nO, _stableId: nextStableId++, padding: 0, zones: [] };
+            layouts.push(nL); refreshLayoutListAndSelection(nL.name); 
+            [layoutEditorArea, zonesEditorArea, deleteLayoutButtonWrapper].forEach(el => el.classList.remove('hidden'));
+            if (!reorderArea.classList.contains('hidden')) { reorderArea.classList.add('hidden'); changeOrderButton.textContent = "Change Order"; }
+        });
+        
+        deleteLayoutButton.addEventListener('click', () => {
+            if (currentLayoutIndex === -1 || layouts.length === 0) return;
+            if (confirm(`Are you sure you want to delete layout "${layouts[currentLayoutIndex].name || 'this layout'}"?`)) {
+                layouts.splice(currentLayoutIndex, 1); refreshLayoutListAndSelection(layouts.length > 0 ? layouts[0].name : null);
+                if (layouts.length === 0) { changeOrderButton.classList.add('hidden'); [layoutEditorArea, zonesEditorArea, deleteLayoutButtonWrapper].forEach(el => el.classList.add('hidden')); }
+                if (!reorderArea.classList.contains('hidden')) { reorderArea.classList.add('hidden'); changeOrderButton.textContent = "Change Order"; }
+            }
+        });
+
+        layoutNameInput.addEventListener('input', () => {
+            if (currentLayoutIndex !== -1 && layouts[currentLayoutIndex]) { layouts[currentLayoutIndex].name = layoutNameInput.value; const selOpt = layoutSelector.options[layoutSelector.selectedIndex]; if (selOpt) { selOpt.textContent = layoutNameInput.value || `Layout ${layouts[currentLayoutIndex].order}`; } }
+        });
+        
+        layoutOrderInput.addEventListener('input', () => {
+            if (currentLayoutIndex !== -1 && layouts[currentLayoutIndex]) { const nO = parseInt(layoutOrderInput.value, 10); if (!isNaN(nO) && nO >= 1) { layouts[currentLayoutIndex].order = nO; refreshLayoutListAndSelection(layouts[currentLayoutIndex].name); } }
+        });
+
+        layoutPaddingInput.addEventListener('input', () => { if (currentLayoutIndex !== -1 && layouts[currentLayoutIndex]) { layouts[currentLayoutIndex].padding = safeParseInt(layoutPaddingInput.value); } });
+
+        addZoneButton.addEventListener('click', () => {
+            if (currentLayoutIndex === -1 || !layouts[currentLayoutIndex]) return;
+            const nZ = { x: 0, y: 0, width: 25, height: 25, applications: [] }, l = layouts[currentLayoutIndex];
+            if (!l.zones) { l.zones = []; } l.zones.push(nZ); const zI = l.zones.length - 1;
+            const zD = document.createElement('div'); zD.className = 'zone-editor'; 
+            zD.innerHTML = `<h4>Zone ${zI + 1} <button class="danger delete-zone-btn" data-index="${zI}">Delete Zone</button></h4> <div class="form-group"> <label for="zoneX-${zI}">X (%):</label> <input type="number" id="zoneX-${zI}" data-index="${zI}" data-prop="x" value="${nZ.x}" min="0" max="100" step="0.01"> </div> <div class="form-group"> <label for="zoneY-${zI}">Y (%):</label> <input type="number" id="zoneY-${zI}" data-index="${zI}" data-prop="y" value="${nZ.y}" min="0" max="100" step="0.01"> </div> <div class="form-group"> <label for="zoneWidth-${zI}">Width (%):</label> <input type="number" id="zoneWidth-${zI}" data-index="${zI}" data-prop="width" value="${nZ.width}" min="0" max="100" step="0.01"> </div> <div class="form-group"> <label for="zoneHeight-${zI}">Height (%):</label> <input type="number" id="zoneHeight-${zI}" data-index="${zI}" data-prop="height" value="${nZ.height}" min="0" max="100" step="0.01"> </div> <div class="form-group"> <label for="zoneApps-${zI}">Apps:</label> <input type="text" id="zoneApps-${zI}" data-index="${zI}" data-prop="applications" placeholder="e.g., firefox,kate" value=""> </div>`;
+            ['zoneX', 'zoneY', 'zoneWidth', 'zoneHeight'].forEach(p => { zD.querySelector(`#${p}-${zI}`).parentNode.appendChild(createPercentageButtons(`${p}-${zI}`)); });
+            zD.querySelectorAll('input').forEach(ip => { ip.addEventListener('input', handleZoneInputChange); ip.addEventListener('change', handleZoneInputChange); });
+            zD.querySelector('.delete-zone-btn').addEventListener('click', handleDeleteZone);
+            zonesListDiv.appendChild(zD); triggerAppearAnimation(zD); renderVisualPreview(); 
+        });
+
+        function handleZoneInputChange(event) {
+            if (currentLayoutIndex === -1 || !layouts[currentLayoutIndex]) return;
+            const ip = event.target, zI = parseInt(ip.dataset.index), prop = ip.dataset.prop, l = layouts[currentLayoutIndex];
+            if (l && l.zones && l.zones[zI]) { l.zones[zI][prop] = prop === 'applications' ? ip.value.split(',').map(s => s.trim()).filter(s => s) : safeParseFloat(ip.value); renderVisualPreview(); }
+        }
+
+        function handleDeleteZone(event) {
+            if (currentLayoutIndex === -1 || !layouts[currentLayoutIndex]) return;
+            const zI = parseInt(event.target.dataset.index), l = layouts[currentLayoutIndex];
+            if (l && l.zones && l.zones[zI] && confirm(`Are you sure you want to delete Zone ${zI + 1}?`)) {
+                l.zones.splice(zI, 1); const zE = event.target.closest('.zone-editor');
+                if (zE) {
+                    zE.style.transition = 'opacity 0.3s ease, max-height 0.3s ease, padding 0.3s ease, margin 0.3s ease, border 0.3s ease';
+                    zE.style.opacity = '0'; zE.style.maxHeight = '0px'; zE.style.paddingTop = '0px'; zE.style.paddingBottom = '0px'; zE.style.marginBottom = '0px'; zE.style.borderWidth = '0px';
+                    setTimeout(() => { zE.remove(); renderZonesList(); }, 300);
+                } else { renderZonesList(); }
+                renderVisualPreview();
+            }
+        }
+
+        exportButton.addEventListener('click', () => {
+            if (layouts.length === 0) { alert("No layouts to export."); return; }
+            const expL = layouts.map(({ _stableId, ...r }) => ({ ...r, padding: Number(r.padding||0), order: Number(r.order||0), zones: r.zones ? r.zones.map(z => ({ ...z, x:Number(z.x||0), y:Number(z.y||0), width:Number(z.width||0), height:Number(z.height||0) })) : [] }));
+            const dS = JSON.stringify(expL, null, 2), dU = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dS);
+            const lE = document.createElement('a'); lE.setAttribute('href', dU); lE.setAttribute('download', 'kwin_layouts.json'); lE.click();
+        });
+
+        importButton.addEventListener('click', () => { importFileInput.click(); });
+        importFileInput.addEventListener('change', (event) => {
+            const f = event.target.files[0]; if (!f) return;
+            const r = new FileReader();
+            r.onload = (e) => { try { loadLayouts(e.target.result); alert(layouts.length > 0 ? `${layouts.length} layouts imported!` : "Imported file empty/invalid."); } catch (err) { alert('Error parsing file: ' + err.message); console.error(err); } };
+            r.onerror = (e) => { alert('Error reading file.'); console.error(e); };
+            r.readAsText(f); importFileInput.value = ''; 
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            applyDarkModePreference(); loadLayouts(initialJsonData); layoutSelector.addEventListener('change', handleLayoutSelect);
+            if (currentLayoutIndex !== -1 && layouts[currentLayoutIndex]) { [layoutEditorArea, zonesEditorArea, deleteLayoutButtonWrapper].forEach(el => el.classList.remove('hidden')); } 
+            else { [layoutEditorArea, zonesEditorArea, deleteLayoutButtonWrapper].forEach(el => el.classList.add('hidden')); }
+        });
+    </script>
+</body>
+</html>
