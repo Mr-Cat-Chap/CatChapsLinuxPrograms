@@ -1,1 +1,1 @@
-Bro it just does the thing, minimal testing, only used for one service so far, good luck
+Just some simple Linux programs, maybe one day I'll uplaod something crazy 
