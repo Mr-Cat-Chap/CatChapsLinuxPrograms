@@ -1,0 +1,101 @@
+Just a simple kscreen-doctor script that will turn off the two monitors, use grep or something to get the names of the monitors available and find a way to organise by current priority (it'll turn off the third screen in this case, I'll have to add a way to choose this later)
+
+I need two, TV mode and turn TV on and off
+
+
+One of the solutions might be what the AI said here line 51
+
+The most common reason this fails—even if the echo looks correct—is that hardcoding a line number (NR == 52) is unreliable and awk may be capturing hidden whitespace or carriage returns that break the exact string comparison.[1][2][3]
+
+Here are the three main reasons it isn't working and how to fix them:
+
+1. The "Hidden Character" Problem
+
+If kscreen-doctor output contains a carriage return (\r) or trailing spaces, TVStatus will be "disabled\r" instead of "disabled". While echo might show "disabled", the if statement will fail because they aren't an exact match.
+
+The Fix: Use [[ ]] (which is more flexible) and trim whitespace, or use awk's index or a regex match.
+
+code
+Bash
+download
+content_copy
+expand_less
+# Trim any potential hidden characters or whitespace
+TVStatus=$(kscreen-doctor -o | awk 'NR == 52 {gsub(/[[:space:]]/,""); print $1}')
+
+# Use double brackets for safer string comparison
+if [[ "$TVStatus" == "disabled" ]]; then
+    echo "Yes"
+fi
+2. Hardcoding NR == 52 is Fragile
+
+Using line 52 is very risky.[1][2][3][5][6] If you plug in a different monitor or your GPU driver lists one extra resolution mode, "line 52" will shift to a different piece of data.[2][3][5] Your script might be accidentally grabbing a word like "HDR:" or a resolution instead of the status.[1][5][6]
+
+The Fix: Search for the specific monitor name and then look for the word "enabled" or "disabled" on that same line.[3][6]
+
+3. Missing Quotes in [ ]
+
+In standard Bash [ ] tests, if $TVStatus is empty or contains a space, the script will crash or return an error.[2][5] You should always wrap variables in double quotes.[2][3][5][6]
+
+The Robust Way (Recommended)
+
+Instead of guessing which line the TV is on, tell awk to find the line for your specific TV (e.g., HDMI-A-1) and check its status directly.[2][5]
+
+code
+Bash
+download
+content_copy
+expand_less
+# 1. Find the status of a specific output (e.g., HDMI-A-1)
+# This looks for the line containing your TV name and checks if "disabled" is present.
+TVStatus=$(kscreen-doctor -o | awk '/HDMI-A-1/ {print ($0 ~ /disabled/ ? "disabled" : "enabled")}')
+
+echo "TV is $TVStatus"
+
+# 2. Compare safely
+if [[ "$TVStatus" == "disabled" ]]; then
+    echo "Yes, it is disabled."
+fi
+How to Debug Your Current Variable
+
+To see if there are hidden characters in your current $TVStatus variable, run this:
+
+code
+Bash
+download
+content_copy
+expand_less
+echo -n "$TVStatus" | cat -A
+
+[2][4][5]* If you see disabled$, it's clean.[1][2][3][5]
+
+If you see disabled^M$, there is a carriage return (\r).[1][2][3][5]
+
+If you see disabled $, there is a trailing space.[1][2][3][5]
+
+Quick fix for your specific script:
+If you want to keep your logic but make it work, change your if to use a regex match, which ignores trailing/leading junk:
+
+code
+Bash
+download
+content_copy
+expand_less
+if [[ "$TVStatus" =~ "disabled" ]]; then
+    echo "Yes"
+fi
+Sources
+help
+reddit.com
+kde.org
+reddit.com
+archlinux.org
+nvidia.com
+reddit.com
+github.com
+Google Search Suggestions
+Display of Search Suggestions is required when using Grounding with Google Search. Learn more
+kscreen-doctor -o output format
+kscreen-doctor -o disabled output example
+bash if string comparison fails with awk output carriage return
+kscreen-doctor -o line 52 meaning
